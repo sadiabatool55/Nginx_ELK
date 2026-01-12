@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        // Corrected paths without extra quotes
-        DOCKER_COMPOSE = 'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-compose.exe'
-        DOCKER = 'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe'
+        // If Docker is in PATH, no need for full paths. Otherwise, keep full paths.
+        DOCKER_COMPOSE = 'docker-compose'  // assumes docker-compose is in PATH
+        DOCKER = 'docker'                  // assumes docker is in PATH
     }
 
     stages {
@@ -17,20 +17,22 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                // Use double quotes around variables inside bat
-                bat "\"${DOCKER_COMPOSE}\" -f \"%DOCKER_COMPOSE_FILE%\" build"
+                echo 'Building Docker images...'
+                bat "\"${DOCKER_COMPOSE}\" -f \"%DOCKER_COMPOSE_FILE%\" build || exit /b 1"
             }
         }
 
         stage('Start Containers') {
             steps {
-                bat "\"${DOCKER_COMPOSE}\" -f \"%DOCKER_COMPOSE_FILE%\" up -d"
+                echo 'Starting containers...'
+                bat "\"${DOCKER_COMPOSE}\" -f \"%DOCKER_COMPOSE_FILE%\" up -d || exit /b 1"
             }
         }
 
         stage('Verify Services') {
             steps {
-                bat "\"${DOCKER}\" ps"
+                echo 'Verifying running containers...'
+                bat "\"${DOCKER}\" ps || exit /b 1"
             }
         }
     }
