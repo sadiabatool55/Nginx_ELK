@@ -2,83 +2,50 @@ pipeline {
     agent any
 
     environment {
-        // GitHub credentials stored in Jenkins, e.g., id 'github-creds'
-        GIT_CREDENTIALS = credentials('github-creds')
-        DOCKER_COMPOSE_FILE = "docker-compose.yml"
+        DOCKER_COMPOSE_FILE = 'docker-compose.yml'
+        // Corrected paths without extra quotes
+        DOCKER_COMPOSE = 'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-compose.exe'
+        DOCKER = 'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe'
     }
 
     stages {
-
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                echo "Cloning GitHub repository..."
-                git(
-                    url: 'https://github.com/sadiabatool55/Nginx_ELK.git', 
-                    credentialsId: "${GIT_CREDENTIALS}"
-                )
+                git branch: 'main', url: 'https://github.com/sadiabatool55/Nginx_ELK.git'
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                echo "Building Docker images using docker-compose..."
-                sh """
-                    docker-compose -f ${DOCKER_COMPOSE_FILE} build
-                    docker images
-                """
+                // Use double quotes around variables inside bat
+                bat "\"${DOCKER_COMPOSE}\" -f \"%DOCKER_COMPOSE_FILE%\" build"
             }
         }
 
         stage('Start Containers') {
             steps {
-                echo "Starting containers using docker-compose..."
-                sh """
-                    docker-compose -f ${DOCKER_COMPOSE_FILE} up -d
-                    docker ps -a
-                """
+                bat "\"${DOCKER_COMPOSE}\" -f \"%DOCKER_COMPOSE_FILE%\" up -d"
             }
         }
 
-        stage('Wait for Healthchecks') {
+        stage('Verify Services') {
             steps {
-                echo "Waiting for all containers to become healthy..."
-                // Loop until all containers are healthy
-                sh """
-                    set -e
-                    for i in {1..20}; do
-                        unhealthy=\$(docker ps --filter "health=unhealthy" -q)
-                        if [ -z "\$unhealthy" ]; then
-                            echo "All containers are healthy!"
-                            break
-                        else
-                            echo "Waiting for containers to become healthy..."
-                            sleep 15
-                        fi
-                    done
-                    docker ps
-                """
-            }
-        }
-
-        stage('Show Logs') {
-            steps {
-                echo "Showing logs for all containers..."
-                sh "docker-compose -f ${DOCKER_COMPOSE_FILE} logs --tail=50"
-            }
-        }
-
-        stage('Stop Containers') {
-            steps {
-                echo "Stopping and removing containers..."
-                sh "docker-compose -f ${DOCKER_COMPOSE_FILE} down"
+                bat "\"${DOCKER}\" ps"
             }
         }
     }
 
     post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
         always {
-            echo "Pipeline finished. Cleaning up Docker resources..."
-            sh "docker system prune -f"
+            echo 'Pipeline finished - cleanup or final steps can go here'
+            // Optional: stop containers after run
+            // bat "\"${DOCKER_COMPOSE}\" -f \"%DOCKER_COMPOSE_FILE%\" down"
         }
     }
 }
