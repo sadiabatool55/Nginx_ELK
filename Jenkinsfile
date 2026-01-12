@@ -9,9 +9,10 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+
+        stage('Verify Workspace') {
             steps {
-                git branch: 'main', url: 'https://github.com/sadiabatool55/Nginx_ELK.git'
+                bat 'dir'
             }
         }
 
@@ -43,10 +44,6 @@ pipeline {
         }
         failure {
             echo 'Pipeline failed!'
-        }
-        always {
-            echo 'Pipeline finished - cleanup or final steps can go here'
-            // Optional: bat "\"${DOCKER_COMPOSE}\" -f \"%DOCKER_COMPOSE_FILE%\" down"
         }
     }
 }
