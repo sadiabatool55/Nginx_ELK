@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        // If Docker is in PATH, no need for full paths. Otherwise, keep full paths.
-        DOCKER_COMPOSE = 'docker-compose'  // assumes docker-compose is in PATH
-        DOCKER = 'docker'                  // assumes docker is in PATH
+        DOCKER_COMPOSE = 'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-compose.exe'
+        DOCKER = 'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe'
+        PATH = "C:\\Windows\\System32;${env.PATH}"
     }
 
     stages {
@@ -46,8 +46,7 @@ pipeline {
         }
         always {
             echo 'Pipeline finished - cleanup or final steps can go here'
-            // Optional: stop containers after run
-            // bat "\"${DOCKER_COMPOSE}\" -f \"%DOCKER_COMPOSE_FILE%\" down"
+            // Optional: bat "\"${DOCKER_COMPOSE}\" -f \"%DOCKER_COMPOSE_FILE%\" down"
         }
     }
 }
