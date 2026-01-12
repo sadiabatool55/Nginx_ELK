@@ -1,10 +1,13 @@
+version: '3.8'
+
 services:
+  # Nginx Reverse Proxy
   nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
+    image: nginx:alpine
     ports:
       - "8001:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - app1
       - app2
@@ -12,14 +15,13 @@ services:
     networks:
       - app-network
 
+  # Flask Apps
   app1:
-    build:
-      context: ./app1
-      dockerfile: Dockerfile
+    build: ./app1
     environment:
-      FLASK_ENV: development
-      APP_NAME: app1
-      MAX_REQUESTS: "3"
+      - FLASK_ENV=development
+      - APP_NAME=app1
+      - MAX_REQUESTS=3
     volumes:
       - app1-logs:/fluent-bit/logs/app1
     networks:
@@ -31,13 +33,11 @@ services:
       retries: 3
 
   app2:
-    build:
-      context: ./app2
-      dockerfile: Dockerfile
+    build: ./app2
     environment:
-      FLASK_ENV: development
-      APP_NAME: app2
-      MAX_REQUESTS: "3"
+      - FLASK_ENV=development
+      - APP_NAME=app2
+      - MAX_REQUESTS=3
     volumes:
       - app2-logs:/fluent-bit/logs/app2
     networks:
@@ -49,13 +49,11 @@ services:
       retries: 3
 
   app3:
-    build:
-      context: ./app3
-      dockerfile: Dockerfile
+    build: ./app3
     environment:
-      FLASK_ENV: development
-      APP_NAME: app3
-      MAX_REQUESTS: "3"
+      - FLASK_ENV=development
+      - APP_NAME=app3
+      - MAX_REQUESTS=3
     volumes:
       - app3-logs:/fluent-bit/logs/app3
     networks:
@@ -66,6 +64,7 @@ services:
       timeout: 10s
       retries: 3
 
+  # Fluent Bit for log aggregation
   fluent-bit:
     image: fluent/fluent-bit:2.2
     container_name: fluent-bit
@@ -78,62 +77,59 @@ services:
       - app1-logs:/fluent-bit/logs/app1
       - app2-logs:/fluent-bit/logs/app2
       - app3-logs:/fluent-bit/logs/app3
-    command:
-      - /fluent-bit/bin/fluent-bit
-      - -c
-      - /fluent-bit/etc/fluent-bit.conf
     networks:
       - app-network
+    command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf"]
 
+  # Elasticsearch
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
     container_name: elasticsearch
     environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-      bootstrap.memory_lock: "false"
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - bootstrap.memory_lock=false
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
+    networks:
+      - app-network
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"yellow\"' || curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'"
-        ]
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"yellow\"' || curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'"]
       interval: 30s
       timeout: 10s
       retries: 10
-    networks:
-      - app-network
 
+  # Kibana
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.0
     container_name: kibana
     depends_on:
       - elasticsearch
     environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
-      ELASTICSEARCH_USERNAME: elastic
-      ELASTICSEARCH_PASSWORD: changeme
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=changeme
     ports:
       - "5601:5601"
+    networks:
+      - app-network
     healthcheck:
       test: ["CMD-SHELL", "curl -s -f http://localhost:5601/api/status || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 10
-    networks:
-      - app-network
 
+# Volumes for logs and Elasticsearch
 volumes:
   app1-logs:
   app2-logs:
   app3-logs:
   elasticsearch-data:
 
+# Network
 networks:
   app-network:
     driver: bridge
