@@ -1,8 +1,8 @@
-version: '3.8'
-
 services:
   nginx:
-    build: ./nginx
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
     ports:
       - "8001:80"
     depends_on:
@@ -13,11 +13,13 @@ services:
       - app-network
 
   app1:
-    build: ./app1
+    build:
+      context: ./app1
+      dockerfile: Dockerfile
     environment:
-      - FLASK_ENV=development
-      - APP_NAME=app1
-      - MAX_REQUESTS=3
+      FLASK_ENV: development
+      APP_NAME: app1
+      MAX_REQUESTS: "3"
     volumes:
       - app1-logs:/fluent-bit/logs/app1
     networks:
@@ -29,11 +31,13 @@ services:
       retries: 3
 
   app2:
-    build: ./app2
+    build:
+      context: ./app2
+      dockerfile: Dockerfile
     environment:
-      - FLASK_ENV=development
-      - APP_NAME=app2
-      - MAX_REQUESTS=3
+      FLASK_ENV: development
+      APP_NAME: app2
+      MAX_REQUESTS: "3"
     volumes:
       - app2-logs:/fluent-bit/logs/app2
     networks:
@@ -45,11 +49,13 @@ services:
       retries: 3
 
   app3:
-    build: ./app3
+    build:
+      context: ./app3
+      dockerfile: Dockerfile
     environment:
-      - FLASK_ENV=development
-      - APP_NAME=app3
-      - MAX_REQUESTS=3
+      FLASK_ENV: development
+      APP_NAME: app3
+      MAX_REQUESTS: "3"
     volumes:
       - app3-logs:/fluent-bit/logs/app3
     networks:
@@ -72,29 +78,36 @@ services:
       - app1-logs:/fluent-bit/logs/app1
       - app2-logs:/fluent-bit/logs/app2
       - app3-logs:/fluent-bit/logs/app3
+    command:
+      - /fluent-bit/bin/fluent-bit
+      - -c
+      - /fluent-bit/etc/fluent-bit.conf
     networks:
       - app-network
-    command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf"]
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
     container_name: elasticsearch
     environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - bootstrap.memory_lock=false  # Changed from true to false
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      bootstrap.memory_lock: "false"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
-    networks:
-      - app-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"yellow\"' || curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"yellow\"' || curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'"
+        ]
       interval: 30s
       timeout: 10s
       retries: 10
+    networks:
+      - app-network
 
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.0
@@ -102,18 +115,18 @@ services:
     depends_on:
       - elasticsearch
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=changeme
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: changeme
     ports:
       - "5601:5601"
-    networks:
-      - app-network
     healthcheck:
       test: ["CMD-SHELL", "curl -s -f http://localhost:5601/api/status || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 10
+    networks:
+      - app-network
 
 volumes:
   app1-logs:
